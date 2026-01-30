@@ -1,0 +1,6 @@
+# Temporary and backup files
+*.txt
+style_copy.css
+script_view.js
+.DS_Store
+Thumbs.db

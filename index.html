@@ -1,0 +1,718 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mechanistic | Elite Management System</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="loading">
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-card">
+            <div class="logo-container">
+                <img src="logo.png" alt="Logo" style="width: 150px; mix-blend-mode: screen;">
+            </div>
+            <h2>Mechanistic Automotive Services</h2>
+            <p>Admin Control Panel Login</p>
+            <form id="login-form-entry" class="login-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="login-user" placeholder="admin" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-pass" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-login">Unlock Dashboard</button>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="javascript:void(0)" onclick="forgotPassword()"
+                        style="color: var(--text-grey); font-size: 0.8rem; text-decoration: none; transition: color 0.3s;"
+                        onmouseover="this.style.color='var(--primary)'"
+                        onmouseout="this.style.color='var(--text-grey)'">Forgot Password?</a>
+                </div>
+                <div id="login-error">Invalid credentials. Please try again.</div>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-container" id="main-app" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo.png" alt="Mechanistic Logo"
+                    style="width: 100%; max-height: 80px; object-fit: contain; mix-blend-mode: screen;">
+            </div>
+            <nav>
+                <div class="nav-item active" data-view="dashboard">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" data-view="add-vehicle">
+                    <i data-lucide="plus-circle"></i>
+                    <span>Add New Job</span>
+                </div>
+                <div class="nav-item" data-view="history">
+                    <i data-lucide="history"></i>
+                    <span>Service History</span>
+                </div>
+                <div class="nav-item" data-view="customers">
+                    <i data-lucide="users"></i>
+                    <span>Customer Hub</span>
+                </div>
+                <div class="nav-item" data-view="inventory">
+                    <i data-lucide="box"></i>
+                    <span>Spare Parts</span>
+                </div>
+                <div class="nav-item" data-view="expenses">
+                    <i data-lucide="wallet"></i>
+                    <span>Expenses</span>
+                </div>
+                <div class="nav-item" data-view="analytics">
+                    <i data-lucide="bar-chart-3"></i>
+                    <span>Analytics</span>
+                </div>
+                <div class="nav-item" data-view="settings">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">Admin</div>
+                    <div class="user-info">
+                        <span class="name">Mechanistic Automotive Services</span>
+                        <span class="role">Manager</span>
+                    </div>
+                </div>
+                <button id="logout-btn-main" class="btn-icon" title="Logout"
+                    style="color: var(--accent-red); margin-left: auto; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; transition: all 0.3s ease;">
+                    <i data-lucide="log-out" style="pointer-events: none; width: 22px;"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-box">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="global-search" placeholder="Search vehicle or owner..."
+                        oninput="handleSearch()">
+                </div>
+                <div class="date-filter-box"
+                    style="display: flex; gap: 10px; align-items: center; background: var(--card-bg); padding: 5px 15px; border-radius: var(--radius); border: 1px solid var(--border-color);">
+                    <span
+                        style="font-size: 0.8rem; color: var(--text-grey); font-weight: 700; text-transform: uppercase;">DATE:</span>
+                    <i data-lucide="calendar" style="width: 16px; color: var(--primary);"></i>
+                    <input type="date" id="date-filter"
+                        style="background: transparent; border: none; color: white; outline: none; font-size: 0.9rem;"
+                        onchange="handleDateFilter()">
+                    <button id="clear-filter" onclick="clearDateFilter()"
+                        style="display: none; background: rgba(255,255,255,0.1); border: none; color: white; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.75rem;">Clear</button>
+                </div>
+                <div class="top-actions">
+                    <button class="btn-icon" title="Export Backup" onclick="exportData()"><i
+                            data-lucide="download"></i></button>
+                    <button class="btn-icon" title="Import Data"
+                        onclick="document.getElementById('import-file').click()"><i data-lucide="upload"></i></button>
+                    <input type="file" id="import-file" style="display:none" onchange="importData(event)">
+                    <button class="btn-primary" onclick="showView('add-vehicle')">
+                        <i data-lucide="plus"></i> New Service
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <section id="dashboard-view" class="view active">
+                <div class="welcome-banner">
+                    <img src="hero.png" alt="Garage Hero" class="hero-bg">
+                    <div class="banner-content">
+                        <h1>Mechanistic Automotive Dashboard</h1>
+                        <p>Mechanistic Automotive Services - Where Engineering Meets Excellence.</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i data-lucide="car"></i>
+                        <div class="stat-info">
+                            <h3>Active Jobs</h3>
+                            <span id="active-jobs-count">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i data-lucide="check-circle"></i>
+                        <div class="stat-info">
+                            <h3>Completed</h3>
+                            <span id="completed-jobs-count">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i data-lucide="indian-rupee"></i>
+                        <div class="stat-info">
+                            <h3>Revenue</h3>
+                            <span id="total-revenue">₹0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left: 4px solid var(--accent-red);">
+                        <i data-lucide="trending-down"
+                            style="color: var(--accent-red); background: rgba(239, 68, 68, 0.1);"></i>
+                        <div class="stat-info">
+                            <h3>Expenses</h3>
+                            <span id="total-expenses-stat">₹0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left: 4px solid var(--accent-green);">
+                        <i data-lucide="trending-up"
+                            style="color: var(--accent-green); background: rgba(16, 185, 129, 0.1);"></i>
+                        <div class="stat-info">
+                            <h3>Net Profit</h3>
+                            <span id="net-profit-stat">₹0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-jobs">
+                    <div class="section-header">
+                        <h2>Ongoing Services</h2>
+                        <a href="javascript:void(0)" class="view-all" onclick="showView('history')">View All</a>
+                    </div>
+                    <div class="jobs-table-container">
+                        <table id="jobs-table">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle #</th>
+                                    <th>Owner</th>
+                                    <th>Model</th>
+                                    <th>Service</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobs-tbody">
+                                <!-- Dynamic Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Add Vehicle View -->
+            <section id="add-vehicle-view" class="view">
+                <div class="form-card">
+                    <h2 id="form-title">Add Vehicle Details</h2>
+                    <form id="vehicle-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Owner Name</label>
+                                <input type="text" id="owner-name" placeholder="Full name"
+                                    oninput="handleNameInput(this)" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="owner-phone" placeholder="91XXXXXXXXXX" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Vehicle Number</label>
+                                <input type="text" id="vehicle-number" placeholder="MH-12-AB-1234"
+                                    oninput="handleVehicleNumInput(this)" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Car Model</label>
+                                <input type="text" id="car-model" placeholder="Honda City / BMW X5"
+                                    list="car-model-suggestions" oninput="handleNameInput(this)" required>
+                                <datalist id="car-model-suggestions">
+                                    <option value="Maruti Suzuki Swift">
+                                    <option value="Maruti Suzuki Baleno">
+                                    <option value="Maruti Suzuki WagonR">
+                                    <option value="Maruti Suzuki Dzire">
+                                    <option value="Hyundai Creta">
+                                    <option value="Hyundai i20">
+                                    <option value="Hyundai Venue">
+                                    <option value="Tata Nexon">
+                                    <option value="Tata Punch">
+                                    <option value="Tata Tiago">
+                                    <option value="Mahindra Scorpio">
+                                    <option value="Mahindra XUV700">
+                                    <option value="Mahindra Thar">
+                                    <option value="Toyota Fortuner">
+                                    <option value="Toyota Innova Crysta">
+                                    <option value="Honda City">
+                                    <option value="Honda Amaze">
+                                    <option value="Kia Seltos">
+                                    <option value="Kia Sonet">
+                                    <option value="Volkswagen Virtus">
+                                    <option value="Skoda Slavia">
+                                    <option value="BMW 3 Series">
+                                    <option value="Audi A4">
+                                    <option value="Mercedes-Benz C-Class">
+                                </datalist>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 25px;">
+                            <label
+                                style="display: block; margin-bottom: 12px; color: var(--text-grey); font-size: 0.9rem; font-weight: 600;">Services
+                                & Repairs Details</label>
+
+                            <!-- Header for Columns -->
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 120px 120px 40px; gap: 15px; margin-bottom: 8px; padding: 0 5px;">
+                                <span
+                                    style="font-size: 0.75rem; color: var(--text-grey); text-transform: uppercase; font-weight: 700;">Service/Part
+                                    Description</span>
+                                <span
+                                    style="font-size: 0.75rem; color: var(--text-grey); text-transform: uppercase; font-weight: 700; text-align: center;">Spare
+                                    Part (&#8377;)</span>
+                                <span
+                                    style="font-size: 0.75rem; color: var(--text-grey); text-transform: uppercase; font-weight: 700; text-align: center;">Labour
+                                    (&#8377;)</span>
+                                <span></span>
+                            </div>
+
+                            <div id="services-list">
+                                <div class="service-item"
+                                    style="display: grid; grid-template-columns: 1fr 120px 120px 40px; gap: 15px; margin-bottom: 10px; align-items: start;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <input type="text" class="service-desc" placeholder="e.g. Brake Pads"
+                                            list="service-suggestions" oninput="handleNameInput(this)" required
+                                            style="padding: 10px; width: 100%;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <input type="number" class="spare-cost" placeholder="0" required
+                                            style="padding: 10px; width: 100%; text-align: center;"
+                                            oninput="calculateTotalFormCost()">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <input type="number" class="labour-cost" placeholder="0" required
+                                            style="padding: 10px; width: 100%; text-align: center;"
+                                            oninput="calculateTotalFormCost()">
+                                    </div>
+                                    <button type="button" class="btn-icon"
+                                        style="background: rgba(239, 68, 68, 0.1); color: var(--accent-red); padding: 10px;"
+                                        onclick="removeServiceRow(this)">
+                                        <i data-lucide="trash-2" style="width: 18px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-secondary-dark"
+                                style="width: 100%; margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                                onclick="addServiceRow()">
+                                <i data-lucide="plus-circle" style="width: 18px;"></i> Add More Service / Part
+                            </button>
+                        </div>
+                        <div class="form-group"
+                            style="background: rgba(251, 176, 15, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: var(--text-white);">Total Estimated Cost:</span>
+                            <span id="form-total-cost"
+                                style="font-size: 1.2rem; font-weight: 800; color: var(--primary); text-transform: none;">&#8377;0</span>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary-dark" onclick="cancelForm()">Cancel</button>
+                            <button type="submit" id="submit-btn" class="btn-primary">Register Vehicle</button>
+                        </div>
+
+                        <!-- Suggestions Datalist (Placed outside to prevent deletion) -->
+                        <datalist id="service-suggestions">
+                            <option value="Oil Change">
+                            <option value="Brake Pad Replacement">
+                            <option value="Air Filter Cleaning">
+                            <option value="Wheel Balancing & Alignment">
+                            <option value="Full Service">
+                            <option value="AC Gas Refilling">
+                            <option value="Engine Tuning Tune-up">
+                            <option value="Washing & Detailing">
+                            <option value="Clutch Plate Repair">
+                            <option value="Battery Checkup">
+                            <option value="Brake Oil Top-up">
+                            <option value="Coolant Refilling">
+                            <option value="Spark Plug Replacement">
+                            <option value="Wiper Blade Change">
+                        </datalist>
+                    </form>
+                </div>
+            </section>
+
+            <!-- History View -->
+            <section id="history-view" class="view">
+                <div class="section-header">
+                    <h2>Service History</h2>
+                    <button class="btn-secondary" onclick="exportHistoryToExcel()">
+                        <i data-lucide="file-spreadsheet"></i> Export to Excel
+                    </button>
+                </div>
+                <div class="jobs-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Vehicle #</th>
+                                <th>Owner</th>
+                                <th>Model</th>
+                                <th>Service</th>
+                                <th>Status</th>
+                                <th>Cost</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Customers View -->
+            <section id="customers-view" class="view">
+                <div class="section-header">
+                    <h2>Customer Database</h2>
+                    <div class="stats-mini">
+                        <span class="badge badge-completed">Total Customers: <strong
+                                id="total-customers-count">0</strong></span>
+                    </div>
+                </div>
+                <div class="jobs-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Phone</th>
+                                <th>Vehicle History</th>
+                                <th>Total Visits</th>
+                                <th>Lifetime Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-tbody">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Inventory View -->
+            <section id="inventory-view" class="view">
+                <div class="section-header">
+                    <h2>Spare Parts Inventory</h2>
+                    <button class="btn-primary" onclick="showInventoryModal()">
+                        <i data-lucide="plus"></i> Add Item
+                    </button>
+                </div>
+                <div class="jobs-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Category</th>
+                                <th>Stock Level</th>
+                                <th>Unit Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-tbody">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Expenses View -->
+            <section id="expenses-view" class="view">
+                <div class="section-header">
+                    <h2>Shop Expenses</h2>
+                    <button class="btn-primary" onclick="showExpenseModal()" style="background: var(--accent-red);">
+                        <i data-lucide="plus"></i> Log Expense
+                    </button>
+                </div>
+                <div class="jobs-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenses-tbody">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Analytics View -->
+            <section id="analytics-view" class="view">
+                <div class="section-header">
+                    <h2>Business Analytics</h2>
+                </div>
+                <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div class="stat-card"
+                        style="flex-direction: column; align-items: flex-start; height: 400px; padding: 30px;">
+                        <h3 style="margin-bottom: 20px;">Revenue Breakdown (Last 6 Months)</h3>
+                        <div id="revenue-chart" class="chart-container"
+                            style="flex: 1; width: 100%; display: flex; align-items: flex-end; gap: 15px; padding-bottom: 20px;">
+                            <!-- CSS Charts -->
+                        </div>
+                    </div>
+                    <div class="stat-card"
+                        style="flex-direction: column; align-items: flex-start; height: 400px; padding: 30px;">
+                        <h3 style="margin-bottom: 20px;">Service Popularity</h3>
+                        <div id="service-chart" style="width: 100%; display: flex; flex-direction: column; gap: 15px;">
+                            <!-- Progress bars -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="settings-view" class="view">
+                <div class="section-header">
+                    <h2>Account Settings</h2>
+                </div>
+                <div class="form-card"
+                    style="max-width: 500px; background: var(--sidebar-bg); border: 1px solid var(--border-color); padding: 30px; border-radius: var(--radius);">
+                    <h3 style="margin-bottom: 20px; color: var(--text-white);">Change Admin Password</h3>
+                    <form id="change-pass-form" onsubmit="changePassword(event)">
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label
+                                style="display: block; margin-bottom: 8px; color: var(--text-grey); font-size: 0.8rem; font-weight: 600;">Current
+                                Password</label>
+                            <input type="password" id="current-pass" placeholder="••••••••" required
+                                style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label
+                                style="display: block; margin-bottom: 8px; color: var(--text-grey); font-size: 0.8rem; font-weight: 600;">New
+                                Password</label>
+                            <input type="password" id="new-pass" placeholder="••••••••" required
+                                style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label
+                                style="display: block; margin-bottom: 8px; color: var(--text-grey); font-size: 0.8rem; font-weight: 600;">Confirm
+                                New Password</label>
+                            <input type="password" id="confirm-pass" placeholder="••••••••" required
+                                style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none;">
+                        </div>
+                        <div class="form-actions" style="margin-top: 25px;">
+                            <button type="submit" class="btn-primary" style="width: 100%;">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="invoice-modal" class="modal" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content invoice-page">
+            <button class="close-modal-btn no-print" onclick="closeInvoice()">
+                <i data-lucide="x"></i>
+            </button>
+            <div id="printable-invoice">
+                <div class="invoice-header">
+                    <div class="invoice-logo" style="text-align: left; display: flex; align-items: center; gap: 15px;">
+                        <img src="logo_invoice.png" alt="Mechanistic Logo" style="height: 70px; object-fit: contain;">
+                        <div>
+                            <h2
+                                style="margin: 0; color: #1a1a1a; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;">
+                                Mechanistic Automotive Services</h2>
+                            <p style="margin: 0; color: #666; font-size: 0.8rem; font-weight: 500;">Where Engineering
+                                Meets Excellence</p>
+                        </div>
+                    </div>
+                    <div class="invoice-meta">
+                        <h1>INVOICE</h1>
+                        <p id="inv-date"></p>
+                        <p id="inv-number"></p>
+                    </div>
+                </div>
+                <hr>
+                <div class="invoice-info">
+                    <div class="bill-to">
+                        <h4>Bill To:</h4>
+                        <p id="inv-owner-name"></p>
+                        <p id="inv-owner-phone"></p>
+                        <p id="inv-vehicle-num"></p>
+                    </div>
+                    <div class="vehicle-details">
+                        <h4>Vehicle:</h4>
+                        <p id="inv-car-model"></p>
+                    </div>
+                </div>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-right">Spares (&#8377;)</th>
+                            <th class="text-right">Labour (&#8377;)</th>
+                            <th class="text-right">Total (&#8377;)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inv-items-body">
+                        <!-- Dynamic items -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3"><strong>Grand Total</strong></td>
+                            <td class="text-right"><strong id="inv-total">&#8377;0</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div class="invoice-footer">
+                    <p>Thank you for choosing Mechanistic Automotive Services! Professional care for your vehicle.
+                    </p>
+                    <div class="footer-meta">
+                        <span>Authorized Signature</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions no-print">
+                <button class="btn-secondary" onclick="closeInvoice()">Close</button>
+                <button class="btn-whatsapp" onclick="sendInvoiceWhatsApp()">
+                    <i data-lucide="message-circle"></i> Send on WhatsApp
+                </button>
+                <button class="btn-primary" style="background: #2563eb;" onclick="downloadInvoicePDF()">
+                    <i data-lucide="file-text"></i> Download PDF
+                </button>
+                <button class="btn-primary" onclick="printInvoice()">
+                    <i data-lucide="printer"></i> Print Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="inventory-modal" class="modal" onclick="closeInventoryModalOnOverlay(event)">
+        <div class="modal-content" style="max-width: 500px; padding: 30px;">
+            <button class="close-modal-btn" onclick="closeInventoryModal()">
+                <i data-lucide="x"></i>
+            </button>
+            <h2 style="margin-bottom: 20px; color: #1a1a1a;">Manage Part</h2>
+            <form id="inventory-form">
+                <input type="hidden" id="part-id">
+                <div class="form-group">
+                    <label style="color: #666;">Part Name</label>
+                    <input type="text" id="part-name" placeholder="e.g. Engine Oil 5W30" required
+                        style="color: #1a1a1a; border: 1px solid #ddd; background: #fff;">
+                </div>
+                <div class="form-group">
+                    <label style="color: #666;">Category</label>
+                    <select id="part-category" required
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                        <option value="Fluids">Fluids & Oils</option>
+                        <option value="Mechanical">Mechanical Parts</option>
+                        <option value="Electrical">Electrical components</option>
+                        <option value="Body">Body & Exterior</option>
+                        <option value="Brakes">Braking System</option>
+                    </select>
+                </div>
+                <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label style="color: #666;">Stock Quantity</label>
+                        <input type="number" id="part-stock" placeholder="0" required
+                            style="color: #1a1a1a; border: 1px solid #ddd; background: #fff;">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #666;">Unit Price (₹)</label>
+                        <input type="number" id="part-price" placeholder="0" required
+                            style="color: #1a1a1a; border: 1px solid #ddd; background: #fff;">
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top: 10px;">
+                    <button type="button" class="btn-secondary" onclick="closeInventoryModal()">Cancel</button>
+                    <button type="submit" class="btn-primary"
+                        style="background: var(--primary-dark); color: white;">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="expense-modal" class="modal" onclick="closeExpenseModalOnOverlay(event)">
+        <div class="modal-content" style="max-width: 500px; padding: 30px;">
+            <button class="close-modal-btn" onclick="closeExpenseModal()">
+                <i data-lucide="x"></i>
+            </button>
+            <h2 style="margin-bottom: 20px; color: #1a1a1a;">Log Expense</h2>
+            <form id="expense-form">
+                <input type="hidden" id="expense-id">
+                <div class="form-group">
+                    <label style="color: #666;">Description</label>
+                    <input type="text" id="expense-desc" placeholder="e.g. Shop Rent / Electricity" required
+                        style="color: #1a1a1a; border: 1px solid #ddd; background: #fff;">
+                </div>
+                <div class="form-group">
+                    <label style="color: #666;">Category</label>
+                    <select id="expense-category" required
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                        <option value="Operational">Operational (Rent, Bills)</option>
+                        <option value="Inventory">Inventory Purchase</option>
+                        <option value="Salaries">Staff Salaries</option>
+                        <option value="Marketing">Marketing & Ads</option>
+                        <option value="Other">Miscellaneous</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="color: #666;">Amount (₹)</label>
+                    <input type="number" id="expense-amount" placeholder="0" required
+                        style="color: #1a1a1a; border: 1px solid #ddd; background: #fff;">
+                </div>
+                <div class="form-actions" style="margin-top: 10px;">
+                    <button type="button" class="btn-secondary" onclick="closeExpenseModal()">Cancel</button>
+                    <button type="submit" class="btn-primary" style="background: var(--accent-red); color: white;">Save
+                        Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="view-job-modal" class="modal" onclick="closeViewJobModalOnOverlay(event)">
+        <div class="modal-content" style="max-width: 600px; padding: 30px;">
+            <button class="close-modal-btn" onclick="closeViewJobModal()">
+                <i data-lucide="x"></i>
+            </button>
+            <div id="job-details-content">
+                <!-- Dynamic High-End Detail View -->
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn-secondary" onclick="closeViewJobModal()">Close</button>
+                <button id="reprint-btn" class="btn-primary" style="background: var(--primary-dark);">
+                    <i data-lucide="printer"></i> View Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+        // Redundant link for logout button
+        const logoutBtn = document.getElementById('logout-btn-main');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                console.log("Manual logout listener triggered");
+                if (typeof logout === 'function') {
+                    logout();
+                } else {
+                    console.error("logout() function not found");
+                    // Fallback emergency logout
+                    sessionStorage.removeItem('garage_logged_in');
+                    window.location.reload();
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
